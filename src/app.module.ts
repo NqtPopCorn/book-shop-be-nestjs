@@ -6,6 +6,7 @@ import { BooksModule } from './modules/books/books.module';
 import { AuthorsModule } from './modules/authors/authors.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
 import { HealthController } from './health.controller';
-@Module({ imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule, BooksModule, AuthorsModule, OrdersModule, StatisticsModule], controllers: [HealthController] })
+@Module({ imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule, BooksModule, AuthorsModule, OrdersModule, StatisticsModule, PromotionsModule], controllers: [HealthController] })
 export class AppModule {}
