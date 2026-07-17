@@ -1,8 +1,8 @@
 # Book Shop Backend
 
-Backend mới được migrate sang **NestJS + TypeScript + Prisma + PostgreSQL**.
+NestJS + TypeScript + Prisma + PostgreSQL backend.
 
-## Chạy local
+## Setup
 
 ```bash
 cp .env.example .env
@@ -14,7 +14,16 @@ npm run prisma:seed
 npm run start:dev
 ```
 
-- API: `http://localhost:3000/api`
-- Swagger: `http://localhost:3000/docs`
+API: http://localhost:3000/api
+Swagger: http://localhost:3000/docs
+Health: http://localhost:3000/api/health
 
-Migration từ repository cũ sẽ được thực hiện theo từng module, giữ tương thích API và không sao chép secrets.
+## Main endpoints
+
+- `POST /api/auth/register`, `POST /api/auth/login`
+- `GET/PATCH /api/account/me`
+- Books and authors CRUD
+- Authenticated order creation/list/cancel
+- `GET /api/admin/orders`, `PATCH /api/admin/orders/:id/status`
+- `POST/GET /api/promotions` for admins
+- `GET /api/statistics/overview` for admins

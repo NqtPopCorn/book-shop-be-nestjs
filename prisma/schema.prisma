@@ -2,27 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id Int @id @default(autoincrement())
-  email String @unique
-  password String
-  firstName String? @map("first_name")
-  lastName String? @map("last_name")
-  role Role @default(CUSTOMER)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  orders Order[]
-  @@map("users")
-}
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+model User { id Int @id @default(autoincrement()) email String @unique password String firstName String? @map("first_name") lastName String? @map("last_name") role Role @default(CUSTOMER) createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") orders Order[] @@map("users") }
 enum Role { CUSTOMER ADMIN }
 model Author { id Int @id @default(autoincrement()) name String biography String? books Book[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@map("authors") }
 model Book { id Int @id @default(autoincrement()) title String description String? isbn String? @unique price Decimal @db.Decimal(12,2) stock Int @default(0) authorId Int? @map("author_id") author Author? @relation(fields:[authorId], references:[id]) orderItems OrderItem[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@index([authorId]) @@map("books") }
-model Order { id Int @id @default(autoincrement()) userId Int @map("user_id") status OrderStatus @default(PENDING) total Decimal @db.Decimal(12,2) user User @relation(fields:[userId], references:[id]) items OrderItem[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@index([userId,status]) @@map("orders") }
+model Promotion { id Int @id @default(autoincrement()) code String @unique percentage Int maxUses Int? @map("max_uses") usedCount Int @default(0) @map("used_count") expiresAt DateTime? @map("expires_at") active Boolean @default(true) orders Order[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@map("promotions") }
+model Order { id Int @id @default(autoincrement()) userId Int @map("user_id") promotionId Int? @map("promotion_id") status OrderStatus @default(PENDING) total Decimal @db.Decimal(12,2) user User @relation(fields:[userId], references:[id]) promotion Promotion? @relation(fields:[promotionId], references:[id]) items OrderItem[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@index([userId,status]) @@index([promotionId]) @@map("orders") }
 enum OrderStatus { PENDING CONFIRMED SHIPPING COMPLETED CANCELLED }
 model OrderItem { id Int @id @default(autoincrement()) orderId Int @map("order_id") bookId Int @map("book_id") quantity Int unitPrice Decimal @db.Decimal(12,2) @map("unit_price") order Order @relation(fields:[orderId], references:[id], onDelete:Cascade) book Book @relation(fields:[bookId], references:[id]) @@unique([orderId,bookId]) @@map("order_items") }
-model Promotion { id Int @id @default(autoincrement()) code String @unique percentage Int maxUses Int? @map("max_uses") usedCount Int @default(0) @map("used_count") expiresAt DateTime? @map("expires_at") active Boolean @default(true) createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@map("promotions") }
