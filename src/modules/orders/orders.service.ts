@@ -11,27 +11,34 @@ import { PromotionRuleService } from "../promotions/promotion-rule.service";
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly ruleService: PromotionRuleService
+    private readonly ruleService: PromotionRuleService,
   ) {}
 
   async create(userId: number, dto: CreateOrderDto) {
     return this.prisma.$transaction(async (tx) => {
-      const ids = dto.items.map((i) => i.bookId);
-      const books = await tx.book.findMany({ where: { id: { in: ids } } });
-      if (books.length !== ids.length)
-        throw new NotFoundException("One or more books not found");
+      const ids = dto.items.map((i) => i.variantId);
+      const variants = await tx.bookVariant.findMany({
+        where: { id: { in: ids } },
+        include: { book: true },
+      });
+      if (variants.length !== ids.length)
+        throw new NotFoundException("One or more variants not found");
 
-      const byId = new Map(books.map((b) => [b.id, b]));
+      const byId = new Map(variants.map((v) => [v.id, v]));
       let subtotal = 0;
 
       const items = dto.items.map((i) => {
-        const book = byId.get(i.bookId)!;
-        if (book.stock < i.quantity)
+        const variant = byId.get(i.variantId)!;
+        if (variant.stock < i.quantity)
           throw new BadRequestException(
-            `Insufficient stock for book ${book.id}`,
+            `Insufficient stock for variant ${variant.id}`,
           );
-        subtotal += Number(book.price) * i.quantity;
-        return { bookId: book.id, quantity: i.quantity, unitPrice: book.price };
+        subtotal += Number(variant.sellingPrice) * i.quantity;
+        return {
+          variantId: variant.id,
+          quantity: i.quantity,
+          unitPrice: variant.sellingPrice,
+        };
       });
 
       let discount = 0;
@@ -49,29 +56,45 @@ export class OrdersService {
         ) {
           throw new BadRequestException("Invalid or expired promotion");
         }
-        
+
         // Use PromotionRuleService
         const cartFacts = {
           subtotal,
           itemCount: dto.items.reduce((acc, i) => acc + i.quantity, 0),
-          items: items.map(i => ({ bookId: i.bookId, quantity: i.quantity, unitPrice: Number(i.unitPrice) })),
+          items: items.map((i) => ({
+            variantId: i.variantId,
+            quantity: i.quantity,
+            unitPrice: Number(i.unitPrice),
+          })),
         };
-        
+
         const action = await this.ruleService.evaluateCart(p as any, cartFacts);
         if (action) {
-          if (action.type === 'order_percentage') {
+          if (action.type === "order_percentage") {
             discount = (subtotal * action.value) / 100;
-          } else if (action.type === 'order_fixed') {
+          } else if (action.type === "order_fixed") {
             discount = action.value;
-          } else if (action.type === 'line_item_percentage') {
-            // value contains bookId and percentage
-            const targetItem = items.find(i => i.bookId === action.value.bookId);
-            if (targetItem) {
-              discount = (Number(targetItem.unitPrice) * targetItem.quantity * action.value.percentage) / 100;
+          } else if (action.type === "line_item_percentage") {
+            // value contains variantIds (array) and percentage
+            const variantIds = action.value.variantIds || [];
+            const percentage = action.value.percentage || 0;
+
+            let itemDiscount = 0;
+            for (const targetItem of items) {
+              if (variantIds.includes(targetItem.variantId)) {
+                itemDiscount +=
+                  (Number(targetItem.unitPrice) *
+                    targetItem.quantity *
+                    percentage) /
+                  100;
+              }
             }
+            discount = itemDiscount;
           }
         } else {
-          throw new BadRequestException("Promotion rules do not match the current cart");
+          throw new BadRequestException(
+            "Promotion rules do not match the current cart",
+          );
         }
 
         promotionId = p.id;
@@ -82,8 +105,8 @@ export class OrdersService {
       }
 
       for (const i of dto.items) {
-        await tx.book.update({
-          where: { id: i.bookId },
+        await tx.bookVariant.update({
+          where: { id: i.variantId },
           data: { stock: { decrement: i.quantity } },
         });
       }
@@ -95,7 +118,10 @@ export class OrdersService {
           ...(promotionId ? { promotionId } : {}),
           items: { create: items },
         },
-        include: { items: { include: { book: true } }, promotion: true },
+        include: {
+          items: { include: { variant: { include: { book: true } } } },
+          promotion: true,
+        },
       });
     });
   }
@@ -103,7 +129,7 @@ export class OrdersService {
   async findMine(userId: number) {
     return this.prisma.order.findMany({
       where: { userId },
-      include: { items: { include: { book: true } } },
+      include: { items: { include: { variant: { include: { book: true } } } } },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -111,7 +137,10 @@ export class OrdersService {
   async findOne(userId: number, orderId: number) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { book: true } }, promotion: true },
+      include: {
+        items: { include: { variant: { include: { book: true } } } },
+        promotion: true,
+      },
     });
     if (!order || order.userId !== userId)
       throw new NotFoundException("Order not found");
@@ -126,8 +155,8 @@ export class OrdersService {
     return this.prisma.$transaction(async (tx) => {
       // Restore stock
       for (const item of order.items) {
-        await tx.book.update({
-          where: { id: item.bookId },
+        await tx.bookVariant.update({
+          where: { id: item.variantId },
           data: { stock: { increment: item.quantity } },
         });
       }

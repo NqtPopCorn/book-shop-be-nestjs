@@ -14,7 +14,7 @@ export class AdminOrdersService {
         user: {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
-        items: { include: { book: true } },
+        items: { include: { variant: { include: { book: true } } } },
       },
       orderBy: { createdAt: "desc" },
     });
