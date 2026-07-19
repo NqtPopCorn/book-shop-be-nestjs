@@ -1,14 +1,162 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
-model User { id Int @id @default(autoincrement()) email String @unique password String firstName String? @map("first_name") lastName String? @map("last_name") role Role @default(CUSTOMER) createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") orders Order[] @@map("users") }
-enum Role { CUSTOMER ADMIN }
-model Author { id Int @id @default(autoincrement()) name String biography String? books Book[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@map("authors") }
-model Category { id Int @id @default(autoincrement()) name String @unique books Book[] @@map("categories") }
-model Publisher { id Int @id @default(autoincrement()) name String @unique books Book[] @@map("publishers") }
-model Translator { id Int @id @default(autoincrement()) name String @unique books Book[] @@map("translators") }
-model Batch { id Int @id @default(autoincrement()) code String @unique quantity Int @default(0) bookId Int @map("book_id") book Book @relation(fields:[bookId], references:[id]) createdAt DateTime @default(now()) @map("created_at") @@index([bookId]) @@map("batches") }
-model Book { id Int @id @default(autoincrement()) title String description String? isbn String? @unique price Decimal @db.Decimal(12,2) stock Int @default(0) authorId Int? @map("author_id") categoryId Int? @map("category_id") publisherId Int? @map("publisher_id") translatorId Int? @map("translator_id") author Author? @relation(fields:[authorId], references:[id]) category Category? @relation(fields:[categoryId], references:[id]) publisher Publisher? @relation(fields:[publisherId], references:[id]) translator Translator? @relation(fields:[translatorId], references:[id]) batches Batch[] orderItems OrderItem[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@index([authorId]) @@index([categoryId]) @@index([publisherId]) @@index([translatorId]) @@map("books") }
-model Promotion { id Int @id @default(autoincrement()) code String @unique percentage Int maxUses Int? @map("max_uses") usedCount Int @default(0) @map("used_count") expiresAt DateTime? @map("expires_at") active Boolean @default(true) orders Order[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@map("promotions") }
-model Order { id Int @id @default(autoincrement()) userId Int @map("user_id") promotionId Int? @map("promotion_id") status OrderStatus @default(PENDING) total Decimal @db.Decimal(12,2) user User @relation(fields:[userId], references:[id]) promotion Promotion? @relation(fields:[promotionId], references:[id]) items OrderItem[] createdAt DateTime @default(now()) @map("created_at") updatedAt DateTime @updatedAt @map("updated_at") @@index([userId,status]) @@index([promotionId]) @@map("orders") }
-enum OrderStatus { PENDING CONFIRMED SHIPPING COMPLETED CANCELLED }
-model OrderItem { id Int @id @default(autoincrement()) orderId Int @map("order_id") bookId Int @map("book_id") quantity Int unitPrice Decimal @db.Decimal(12,2) @map("unit_price") order Order @relation(fields:[orderId], references:[id], onDelete:Cascade) book Book @relation(fields:[bookId], references:[id]) @@unique([orderId,bookId]) @@map("order_items") }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String?  @map("first_name")
+  lastName  String?  @map("last_name")
+  role      Role       @default(CUSTOMER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  orders    Order[]
+
+  @@map("users")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+model Author {
+  id        Int      @id @default(autoincrement())
+  name      String
+  biography String?
+  books     Book[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("authors")
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  books Book[]
+
+  @@map("categories")
+}
+
+model Publisher {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  books Book[]
+
+  @@map("publishers")
+}
+
+model Translator {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  books Book[]
+
+  @@map("translators")
+}
+
+model Batch {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  quantity  Int      @default(0)
+  bookId    Int      @map("book_id")
+  book      Book     @relation(fields: [bookId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([bookId])
+  @@map("batches")
+}
+
+model Book {
+  id           Int         @id @default(autoincrement())
+  title        String
+  description  String?
+  isbn         String?     @unique
+  price        Decimal     @db.Decimal(12, 2)
+  stock        Int         @default(0)
+  authorId     Int?        @map("author_id")
+  categoryId   Int?        @map("category_id")
+  publisherId  Int?        @map("publisher_id")
+  translatorId Int?        @map("translator_id")
+  author       Author?     @relation(fields: [authorId], references: [id])
+  category     Category?   @relation(fields: [categoryId], references: [id])
+  publisher    Publisher?  @relation(fields: [publisherId], references: [id])
+  translator   Translator? @relation(fields: [translatorId], references: [id])
+  batches      Batch[]
+  orderItems   OrderItem[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([publisherId])
+  @@index([translatorId])
+  @@map("books")
+}
+
+model Promotion {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique
+  percentage Int?
+  conditions Json?
+  actions    Json?
+  maxUses    Int?      @map("max_uses")
+  usedCount  Int       @default(0) @map("used_count")
+  expiresAt  DateTime? @map("expires_at")
+  active     Boolean   @default(true)
+  orders     Order[]
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("promotions")
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  userId      Int         @map("user_id")
+  promotionId Int?        @map("promotion_id")
+  status      OrderStatus @default(PENDING)
+  total       Decimal     @db.Decimal(12, 2)
+  user        User        @relation(fields: [userId], references: [id])
+  promotion   Promotion?  @relation(fields: [promotionId], references: [id])
+  items       OrderItem[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([promotionId])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  bookId    Int     @map("book_id")
+  quantity  Int
+  unitPrice Decimal @db.Decimal(12, 2) @map("unit_price")
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  book      Book    @relation(fields: [bookId], references: [id])
+
+  @@unique([orderId, bookId])
+  @@map("order_items")
+}
