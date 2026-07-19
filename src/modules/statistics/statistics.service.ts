@@ -53,13 +53,17 @@ export class StatisticsService {
     // Lấy số lượng tồn kho theo danh mục
     const categories = await this.prisma.category.findMany({
       include: {
-        books: { select: { stock: true } },
+        books: { include: { variants: { select: { stock: true } } } },
       },
     });
 
     return categories.map((cat) => ({
       name: cat.name,
-      stock: cat.books.reduce((sum, book) => sum + book.stock, 0),
+      stock: cat.books.reduce((sum, book) => {
+        return (
+          sum + book.variants.reduce((vSum, variant) => vSum + variant.stock, 0)
+        );
+      }, 0),
     }));
   }
 }

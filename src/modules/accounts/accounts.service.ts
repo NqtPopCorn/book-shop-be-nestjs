@@ -44,7 +44,7 @@ export class AccountsService {
         status: true,
         createdAt: true,
       },
-      orderBy: { id: "asc" }
+      orderBy: { id: "asc" },
     });
   }
 
@@ -52,7 +52,7 @@ export class AccountsService {
     return (this.prisma.user as any).update({
       where: { id },
       data: { status },
-      select: { id: true, status: true }
+      select: { id: true, status: true },
     });
   }
 }
