@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Patch, Delete, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Patch,
+  Delete,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -15,15 +24,21 @@ export class PromotionsController {
   constructor(private readonly service: PromotionsService) {}
 
   @Roles(Role.ADMIN)
-  @Post() 
+  @Post()
   create(@Body() dto: CreatePromotionDto) {
     return this.service.create(dto);
   }
 
   @Roles(Role.ADMIN)
-  @Get() 
+  @Get()
   findAll() {
     return this.service.findAll();
+  }
+
+  @Roles(Role.ADMIN)
+  @Get(":id")
+  findOne(@Param("id") id: string) {
+    return this.service.findOne(+id);
   }
 
   @Get("check/:code")

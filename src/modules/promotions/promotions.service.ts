@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreatePromotionDto } from "./dto/create-promotion.dto";
 import { PromotionRuleService } from "./promotion-rule.service";
@@ -7,7 +11,7 @@ import { PromotionRuleService } from "./promotion-rule.service";
 export class PromotionsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly ruleService: PromotionRuleService
+    private readonly ruleService: PromotionRuleService,
   ) {}
 
   create(dto: CreatePromotionDto) {
@@ -25,13 +29,21 @@ export class PromotionsService {
     return this.prisma.promotion.findMany({ orderBy: { createdAt: "desc" } });
   }
 
+  async findOne(id: number) {
+    const p = await this.prisma.promotion.findUnique({ where: { id } });
+    if (!p) throw new NotFoundException("Mã khuyến mãi không tồn tại");
+    return p;
+  }
+
   async checkCode(code: string) {
     const p = await this.prisma.promotion.findUnique({ where: { code } });
     if (!p) throw new NotFoundException("Mã khuyến mãi không tồn tại");
     if (!p.active) throw new BadRequestException("Mã khuyến mãi đã bị khoá");
-    if (p.expiresAt && p.expiresAt < new Date()) throw new BadRequestException("Mã khuyến mãi đã hết hạn");
-    if (p.maxUses && p.usedCount >= p.maxUses) throw new BadRequestException("Mã khuyến mãi đã hết lượt sử dụng");
-    
+    if (p.expiresAt && p.expiresAt < new Date())
+      throw new BadRequestException("Mã khuyến mãi đã hết hạn");
+    if (p.maxUses && p.usedCount >= p.maxUses)
+      throw new BadRequestException("Mã khuyến mãi đã hết lượt sử dụng");
+
     return p;
   }
 
@@ -43,7 +55,7 @@ export class PromotionsService {
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
         conditions: data.conditions,
         actions: data.actions,
-      }
+      },
     });
   }
 
